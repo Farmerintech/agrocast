@@ -18,7 +18,7 @@ import { scheduleFarmNotifications } from './src/notifications';
 type Tab = 'home' | 'rain' | 'crops' | 'tools' | 'settings';
 export default function App() {
   const [ready, setReady] = useState(false); const [onboarded, setOnboarded] = useState(false); const [location, setLocation] = useState<FarmLocation | null>(null); const [tab, setTab] = useState<Tab>('home'); const [nested, setNested] = useState(false);
-  useEffect(() => { (async () => { await initializeDatabase(); setLocation(await getLocation()); setOnboarded((await getSetting('onboarding_complete')) === 'true'); setReady(true); })(); }, []);
+  useEffect(() => { (async () => { try { await initializeDatabase(); setLocation(await getLocation()); setOnboarded((await getSetting('onboarding_complete')) === 'true'); } finally { setReady(true); } })(); }, []);
   useEffect(() => {
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
       if (nested) { setNested(false); return true; }
@@ -32,7 +32,7 @@ export default function App() {
   useEffect(() => { if (ready && onboarded && farm.weather.data) void scheduleFarmNotifications(farm.weather.data).catch(() => false); }, [ready, onboarded, farm.weather.data]);
   async function updateLocation(next: FarmLocation) { await saveLocation(next); setLocation(next); setTab('home'); }
   async function finishOnboarding(next?: FarmLocation) { if (next) await updateLocation(next); await setSetting('onboarding_complete', 'true'); setOnboarded(true); if (!next) setTab('settings'); }
-  if (!ready) return <View style={styles.loading}><ActivityIndicator size="large" color={colors.primary} /><Text style={styles.loadingText}>Preparing offline storageÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¦</Text></View>;
+  if (!ready) return <View style={styles.loading}><ActivityIndicator size="large" color={colors.primary} /><Text style={styles.loadingText}>Preparing offline storage...</Text></View>;
   if (!onboarded) return <SafeAreaProvider style={{backgroundColor:colors.background}}><SafeAreaView style={styles.safe}><StatusBar style="dark" /><OnboardingScreen onFinish={finishOnboarding} /></SafeAreaView></SafeAreaProvider>;
   return <SafeAreaProvider style={{backgroundColor:colors.background}}><SafeAreaView style={styles.safe} edges={['top', 'bottom']}><StatusBar style="dark" /><View style={styles.screen}>
     {!nested ? <AppHeader tab={tab} location={location} cached={farm.weather.isCached} hasWeather={Boolean(farm.weather.data)} /> : null}
