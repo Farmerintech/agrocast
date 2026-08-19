@@ -6,24 +6,21 @@
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "icon": "./assets/icon.png",
-    "splash": {
-      "image": "./assets/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#F4F1E8"
+    "androidStatusBar": {
+      "barStyle": "dark-content",
+      "backgroundColor": "#FFFFFF",
+      "translucent": false
     },
     "android": {
       "package": "com.agrocast.farmweather",
       "userInterfaceStyle": "light",
-      "statusBar": {
-        "barStyle": "dark-content",
-        "backgroundColor": "#FFFFFF",
-        "translucent": false
-      },
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#174728"
       },
       "permissions": [
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION"
       ]
@@ -38,6 +35,14 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#F4F1E8"
+        }
+      ],
       [
         "expo-location",
         {
@@ -69,6 +74,12 @@
         "projectId": "75bc8601-a4f4-48b3-939b-3c6700c7c3dc"
       }
     },
-    "owner": "farmerintech"
+    "owner": "farmerintech",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/75bc8601-a4f4-48b3-939b-3c6700c7c3dc"
+    }
   }
 }
