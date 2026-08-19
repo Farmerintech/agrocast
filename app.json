@@ -1,0 +1,74 @@
+{
+  "expo": {
+    "name": "AgroCast",
+    "slug": "agrocast",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#F4F1E8"
+    },
+    "android": {
+      "package": "com.agrocast.farmweather",
+      "userInterfaceStyle": "light",
+      "statusBar": {
+        "barStyle": "dark-content",
+        "backgroundColor": "#FFFFFF",
+        "translucent": false
+      },
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#174728"
+      },
+      "permissions": [
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
+      ]
+    },
+    "ios": {
+      "bundleIdentifier": "com.agrocast.farmweather",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "AgroCast uses your location to provide weather and farming guidance for your farm."
+      }
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Allow AgroCast to use your location for local farm weather."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow AgroCast to choose a crop photo for pest and disease review.",
+          "cameraPermission": "Allow AgroCast to photograph crop symptoms for pest and disease review.",
+          "microphonePermission": false
+        }
+      ],
+      "expo-sqlite",
+      "@react-native-community/datetimepicker",
+      "expo-sharing",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#28643B",
+          "sounds": []
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "75bc8601-a4f4-48b3-939b-3c6700c7c3dc"
+      }
+    },
+    "owner": "farmerintech"
+  }
+}
