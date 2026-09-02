@@ -42,7 +42,15 @@ export type RainfallData = {
   recentPeriod: string;
   currentYear: number;
   currentYearTotal: number;
+  /** Typical rainfall accumulated by this same date in prior years — a fair baseline for the "so far" total. */
+  normalToDate: number;
   currentMonth: { month: number; total: number; days: { date: string; rainfall: number }[] };
+  /** Near-real-time stats from the live forecast model (ERA5 history lags ~5 days). */
+  recentRain: {
+    yesterday: { date: string; rainfall: number } | null;
+    today: { date: string; rainfall: number } | null;
+    weekTotal: number | null;
+  };
 };
 
 export type SoilData = {

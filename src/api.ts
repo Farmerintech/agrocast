@@ -73,43 +73,112 @@ export async function fetchWeather(location: FarmLocation): Promise<WeatherData>
 }
 
 export async function fetchRainfall(location: FarmLocation): Promise<RainfallData> {
-  const currentYear = new Date().getUTCFullYear();
-  const endYear = currentYear - 1;
-  const startYear = currentYear - 10;
-  const start = `${startYear}0101`;
-  const end = `${endYear}1231`;
-  const params = new URLSearchParams({
-    parameters: 'PRECTOTCORR', community: 'AG', longitude: String(location.longitude),
-    latitude: String(location.latitude), start, end, format: 'JSON',
-  });
-  type Power = { properties: { parameter: { PRECTOTCORR: Record<string, number> } } };
-  const raw = await fetchJson<Power>(`https://power.larc.nasa.gov/api/temporal/daily/point?${params}`);
-  const values = raw.properties.parameter.PRECTOTCORR;
-  const totals = new Map<number, number[]>();
-  for (let month = 1; month <= 12; month++) totals.set(month, []);
-  const yearly = new Map<string, number>();
-  Object.entries(values).forEach(([date, value]) => {
-    if (value < 0) return;
-    const year = date.slice(0, 4);
-    const month = Number(date.slice(4, 6));
-    const key = `${year}-${month}`;
-    yearly.set(key, (yearly.get(key) ?? 0) + value);
-  });
-  yearly.forEach((total, key) => totals.get(Number(key.split('-')[1]))?.push(total));
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const startYear = currentYear - 10; // ten complete years before this one
+  const endDate = `${currentYear}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+
+  // 1) Long-run history from the Open-Meteo ERA5 reanalysis archive. It is the
+  //    measured record, but it is published ~5 days behind the live date.
+  type Daily = { daily: { time: string[]; precipitation_sum: Array<number | null> } };
+  const archive = await fetchJson<Daily>(`https://archive-api.open-meteo.com/v1/archive?${new URLSearchParams({
+    latitude: String(location.latitude),
+    longitude: String(location.longitude),
+    start_date: `${startYear}-01-01`,
+    end_date: endDate,
+    daily: 'precipitation_sum',
+    timezone: 'auto',
+  })}`);
+
+  // Keep only published days — nulls are dates ERA5 has not produced yet.
+  const days = archive.daily.time.map((date, i) => {
+    const [y, m, d] = date.split('-').map(Number);
+    const mm = archive.daily.precipitation_sum[i];
+    return { y, m, d, mm: mm == null || !Number.isFinite(mm) ? null : mm };
+  }).filter((day): day is { y: number; m: number; d: number; mm: number } => day.mm !== null);
+
+  const monthKey = (y: number, m: number) => `${y}-${m}`;
+  const monthTotal = new Map<string, number>();
+  days.forEach((day) => monthTotal.set(monthKey(day.y, day.m), (monthTotal.get(monthKey(day.y, day.m)) ?? 0) + day.mm));
+
+  // The newest published day of this year defines the fair comparison window
+  // (this year is incomplete, so prior years are only counted up to the same date).
+  const yearDays = days.filter((day) => day.y === currentYear);
+  const latest = yearDays.length ? yearDays[yearDays.length - 1] : null;
+  const window = latest ? { m: latest.m, d: latest.d } : { m: now.getMonth() + 1, d: now.getDate() };
+  const within = (day: { m: number; d: number }) => day.m < window.m || (day.m === window.m && day.d <= window.d);
+
+  // Per-month climatology over the ten prior complete years, plus this year's totals.
   const months = Array.from({ length: 12 }, (_, i) => {
     const month = i + 1;
-    const all = totals.get(month) ?? [];
-    const baseline = all.slice(0, Math.max(0, all.length - 1));
+    const normals: number[] = [];
+    for (let year = startYear; year < currentYear; year += 1) {
+      const total = monthTotal.get(monthKey(year, month));
+      if (total !== undefined) normals.push(total);
+    }
     return {
       month,
-      normal: baseline.length ? baseline.reduce((a, b) => a + b, 0) / baseline.length : 0,
-      recent: (yearly.get(`${currentYear}-${month}`) ?? 0),
+      normal: normals.length ? normals.reduce((a, b) => a + b, 0) / normals.length : 0,
+      recent: monthTotal.get(monthKey(currentYear, month)) ?? 0,
     };
   });
-  const currentMonthNumber = new Date().getUTCMonth() + 1;
-  const currentMonthDays = Object.entries(values).filter(([date]) => date.startsWith(String(currentYear) + String(currentMonthNumber).padStart(2, '0'))).map(([date, value]) => ({ date: `${date.slice(0, 4)}-${date.slice(4, 6)}-${date.slice(6, 8)}`, rainfall: value < 0 ? 0 : value })).sort((a, b) => a.date.localeCompare(b.date));
-  const currentYearTotal = months.reduce((sum, month) => sum + month.recent, 0);
-  return { months, normalPeriod: `${startYear}–${endYear} average`, recentPeriod: String(currentYear), currentYear, currentYearTotal, currentMonth: { month: currentMonthNumber, total: currentMonthDays.reduce((sum, day) => sum + day.rainfall, 0), days: currentMonthDays } };
+
+  // Year-to-date observed, vs the typical year-to-date over the same window.
+  let currentYearTotal = 0;
+  const ytdPerYear = new Map<number, number>();
+  days.forEach((day) => {
+    if (day.y === currentYear) currentYearTotal += day.mm;
+    else if (day.y >= startYear && within(day)) ytdPerYear.set(day.y, (ytdPerYear.get(day.y) ?? 0) + day.mm);
+  });
+  const normalToDate = ytdPerYear.size ? [...ytdPerYear.values()].reduce((a, b) => a + b, 0) / ytdPerYear.size : 0;
+
+  const currentMonth = now.getMonth() + 1;
+  const currentMonthDays = days
+    .filter((day) => day.y === currentYear && day.m === currentMonth)
+    .map((day) => ({ date: `${day.y}-${pad(day.m)}-${pad(day.d)}`, rainfall: day.mm }))
+    .sort((a, b) => a.date.localeCompare(b.date));
+
+  // 2) Yesterday / today / next 7 days from the live forecast model, which ERA5
+  //    has not published yet. `past_days: 1` makes the daily array start yesterday,
+  //    so index 1 is today and the following entries are the 7-day outlook.
+  let recentRain: RainfallData['recentRain'] = { yesterday: null, today: null, weekTotal: null };
+  try {
+    const recent = await fetchJson<Daily>(`https://api.open-meteo.com/v1/forecast?${new URLSearchParams({
+      latitude: String(location.latitude),
+      longitude: String(location.longitude),
+      daily: 'precipitation_sum',
+      past_days: '1',
+      forecast_days: '7',
+      timezone: 'auto',
+    })}`);
+    const times = recent.daily.time;
+    const vals = recent.daily.precipitation_sum;
+    const at = (i: number) => {
+      const v = vals[i];
+      return v == null || !Number.isFinite(v) ? 0 : v;
+    };
+    let weekTotal = 0;
+    for (let i = 1; i < times.length && i < 8; i += 1) weekTotal += at(i);
+    recentRain = {
+      yesterday: { date: times[0] ?? '', rainfall: at(0) },
+      today: { date: times[1] ?? '', rainfall: at(1) },
+      weekTotal,
+    };
+  } catch {
+    // ERA5 history is still returned even if the live outlook is unavailable.
+  }
+
+  return {
+    months,
+    normalPeriod: `${startYear}–${currentYear - 1} average`,
+    recentPeriod: String(currentYear),
+    currentYear,
+    currentYearTotal,
+    normalToDate,
+    currentMonth: { month: currentMonth, total: currentMonthDays.reduce((sum, day) => sum + day.rainfall, 0), days: currentMonthDays },
+    recentRain,
+  };
 }
 
 export async function fetchSoil(location: FarmLocation): Promise<SoilData> {
