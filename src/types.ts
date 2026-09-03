@@ -2,6 +2,10 @@ export type FarmLocation = {
   name: string;
   latitude: number;
   longitude: number;
+  /** Administrative area (state / district / region), from Nominatim when known. */
+  region?: string;
+  /** Country name, from Nominatim when known. */
+  country?: string;
 };
 
 export type WeatherDay = {

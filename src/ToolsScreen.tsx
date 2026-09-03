@@ -5,6 +5,7 @@ import { FarmingGuides } from './FarmingGuides';
 import { FarmAssistant } from './FarmAssistant';
 import { FarmRecords } from './FarmRecords';
 import { FieldMappingDemo } from './FieldMappingDemo';
+import { MarketPrices } from './MarketPrices';
 
 export function ToolsScreen({ location, weather, rainfall, soil, onNestedChange }: { location: FarmLocation | null; weather: Loadable<WeatherData>; rainfall: Loadable<RainfallData>; soil: Loadable<SoilData>; onNestedChange?: (nested: boolean) => void }) {
   const features: Feature[] = [
@@ -21,10 +22,7 @@ export function ToolsScreen({ location, weather, rainfall, soil, onNestedChange 
       { heading: 'List every production cost', body: 'Include seed, fertilizer, chemicals, labor, land preparation, irrigation, transport, storage, rent, and finance costs.', icon: 'cash-minus' },
       { heading: 'Estimate conservatively', body: 'Profit = expected yield × realistic farm-gate price − total cost. Test low-price and low-yield scenarios before investing.', icon: 'chart-line' },
     ]},
-    { id: 'market', title: 'Market prices', subtitle: 'Track saved prices and sync online', icon: 'storefront-outline', color: '#B06C25', badge: 'SYNC', content: [
-      { heading: 'Compare more than one market', body: 'A higher headline price may not cover additional transport, fees, losses, and time.', icon: 'map-marker-distance' },
-      { heading: 'Offline-first price records', body: 'The price tracker is designed to retain the last successful online sync and allow locally recorded observations.', icon: 'database-check-outline' },
-    ]},
+    { id: 'market', title: 'Market prices', subtitle: 'Forecast commodity prices months ahead', icon: 'chart-line', color: '#B06C25', customContent: <MarketPrices />, content: [] },
     { id: 'fields', title: 'Field mapping', subtitle: 'Offline farm point and plot board', icon: 'map-outline', color: '#2E78A6', customContent: <FieldMappingDemo location={location} />, content: [
       { heading: location?.name ?? 'Current farm', body: location ? `Your main farm point is saved at ${location.latitude.toFixed(4)}, ${location.longitude.toFixed(4)}.` : 'Set a farm location to begin organizing fields.', icon: 'map-marker-outline' },
       { heading: 'Plot boundaries planned', body: 'A future map update can add named fields, boundary area, crop history, and field notes while retaining offline access.', icon: 'vector-polygon' },

@@ -12,24 +12,31 @@ async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
   }
 }
 
+type GeoAddress = { state?: string; state_district?: string; region?: string; county?: string; country?: string };
+type GeoRow = { display_name: string; lat?: string; lon?: string; address?: GeoAddress };
+function placeFromAddress(address: GeoAddress | undefined) {
+  return { region: address?.state ?? address?.state_district ?? address?.region ?? address?.county, country: address?.country };
+}
+
 export async function searchPlaces(query: string): Promise<FarmLocation[]> {
   const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=5&addressdetails=1&q=${encodeURIComponent(query)}`;
-  const rows = await fetchJson<Array<{ display_name: string; lat: string; lon: string }>>(url, {
+  const rows = await fetchJson<GeoRow[]>(url, {
     headers: { 'User-Agent': 'AgroCast/1.0 (farm weather mobile app)' },
   });
   return rows.map((row) => ({
     name: row.display_name,
     latitude: Number(row.lat),
     longitude: Number(row.lon),
+    ...placeFromAddress(row.address),
   }));
 }
 
 export async function reverseGeocode(latitude: number, longitude: number): Promise<FarmLocation> {
-  const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}`;
-  const row = await fetchJson<{ display_name?: string }>(url, {
+  const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&addressdetails=1&lat=${latitude}&lon=${longitude}`;
+  const row = await fetchJson<GeoRow>(url, {
     headers: { 'User-Agent': 'AgroCast/1.0 (farm weather mobile app)' },
   });
-  return { name: row.display_name ?? 'My farm', latitude, longitude };
+  return { name: row.display_name ?? 'My farm', latitude, longitude, ...placeFromAddress(row.address) };
 }
 
 export async function fetchWeather(location: FarmLocation): Promise<WeatherData> {

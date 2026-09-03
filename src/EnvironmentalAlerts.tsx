@@ -9,7 +9,7 @@ type Hazard = { id: string; day: WeatherDay; title: string; detail: string; acti
 
 function dateLabel(date: string) { return new Date(`${date}T12:00:00`).toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' }); }
 
-function hazardsForDay(day: WeatherDay, humidity: number, soil: SoilData | null): Hazard[] {
+export function hazardsForDay(day: WeatherDay, humidity: number, soil: SoilData | null): Hazard[] {
   const hazards: Hazard[] = [];
   if (day.precipitation >= 50) hazards.push({ id: 'rain', day, title: 'Very heavy rainfall', detail: `${day.precipitation.toFixed(0)} mm forecast with ${day.precipitationProbability.toFixed(0)}% probability. Flash flooding and waterlogging are possible.`, action: 'Clear drains, protect stored inputs, and delay fertilizer or pesticide application.', severity: 'high', icon: 'weather-pouring' });
   else if (day.precipitation >= 25) hazards.push({ id: 'rain', day, title: 'Heavy rainfall', detail: `${day.precipitation.toFixed(0)} mm forecast. Low areas may collect water.`, action: 'Inspect drainage and avoid field operations that compact wet soil.', severity: 'medium', icon: 'weather-rainy' });
